@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晓牧传媒文案助手 v4.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Noto Sans SC', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); font-weight: 600; }
+        .btn-primary span { color: white !important; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); }
+        .length-option { transition: all 0.3s ease; border: 2px solid #e5e7eb; }
+        .length-option:hover { border-color: #667eea; transform: translateY(-2px); }
+        .length-option.selected { border-color: #667eea; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2); }
+        .copy-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-left: 4px solid #667eea; transition: all 0.3s ease; }
+        .copy-card:hover { transform: translateX(4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .copy-card.success { border-left-color: #10b981; }
+        .copy-card.fail { border-left-color: #ef4444; background: #fef2f2; }
+        .tag { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-right: 4px; }
+        .tag-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .tag-blue { background: #e0e7ff; color: #4338ca; }
+        .tag-orange { background: #fef3c7; color: #92400e; }
+        .tag-green { background: #d1fae5; color: #065f46; }
+        .btn-switch { padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #667eea; color: #667eea; background: white; cursor: pointer; transition: all 0.2s; }
+        .btn-switch:hover { background: #667eea; color: white; }
+        .btn-switch:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer; }
+        .btn-icon:hover { background: #f3f4f6; }
+        textarea:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold">晓牧传媒文案助手</h1>
+                    <p class="text-xs text-white/70">v4.1 修复版 · 短文案默认 · 支持切换长度</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition">退出</button>
+        </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto px-4 py-6">
+        <!-- 输入区域 -->
+        <div class="glass-card rounded-2xl shadow-xl p-6 mb-6">
+            
+            <!-- 行业选择 -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">🏭 行业类型</label>
+                <select id="industrySelect" class="w-full md:w-64 p-3 border-2 border-gray-200 rounded-xl bg-white">
+                    <!-- JS填充 -->
+                </select>
+                <p class="text-sm text-gray-500 mt-1" id="industryDesc"></p>
+            </div>
+
+            <!-- 资料输入 -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">📝 客户资料 <span class="text-gray-400 font-normal">（直接复制粘贴）</span></label>
+                <textarea 
+                    id="rawData" 
+                    class="w-full p-4 border-2 border-gray-200 rounded-xl text-[15px] leading-relaxed resize-none"
+                    rows="10"
+                    placeholder="请粘贴客户资料，建议包含：&#10;• 出镜称呼&#10;• 店铺/企业名称&#10;• 城市（不需要具体门牌号）&#10;• 主营业务&#10;• 核心卖点&#10;• 真实故事/经历（100字以上）"></textarea>
+            </div>
+
+            <!-- 生成按钮 -->
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-500 flex items-center gap-1">
+                    <span class="text-green-500">✓</span> 默认生成短文案(150-180字)，每条可切换长文案
+                </span>
+                <button onclick="generate()" id="submitBtn" class="btn-primary px-8 py-3 rounded-xl font-semibold">
+                    <span id="btnText">✨ 生成30条短文案</span>
+                </button>
+            </div>
+            
+            <!-- 进度条 -->
+            <div id="progressArea" class="hidden mt-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div id="progressFill" class="h-full gradient-bg transition-all" style="width: 0%"></div>
+                    </div>
+                    <span id="progressText" class="text-sm text-gray-600 font-medium">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="resultArea" class="hidden">
+            
+            <!-- 统计 -->
+            <div class="flex flex-wrap gap-4 mb-6">
+                <div class="bg-white rounded-xl px-5 py-3 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold" id="totalCount">30</div>
+                    <div><div class="text-xs text-gray-500">总数</div></div>
+                </div>
+                <div class="bg-white rounded-xl px-5 py-3 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold" id="passCount">0</div>
+                    <div><div class="text-xs text-gray-500">达标</div></div>
+                </div>
+                <div class="bg-white rounded-xl px-5 py-3 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold" id="failCount">0</div>
+                    <div><div class="text-xs text-gray-500">失败</div></div>
+                </div>
+            </div>
+
+            <!-- 操作栏 -->
+            <div class="flex gap-3 mb-6">
+                <button onclick="checkAllSensitive()" class="px-4 py-2 bg-white border-2 border-red-200 text-red-600 rounded-xl hover:bg-red-50 text-sm font-medium">
+                    🚨 检测敏感词
+                </button>
+                <button onclick="copyAll()" class="px-4 py-2 bg-white border-2 border-green-200 text-green-600 rounded-xl hover:bg-green-50 text-sm font-medium">
+                    📋 复制全部
+                </button>
+                <button onclick="downloadTxt()" class="px-4 py-2 bg-white border-2 border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm font-medium">
+                    💾 下载TXT
+                </button>
+            </div>
+            
+            <!-- 敏感词警告 -->
+            <div id="sensitiveAlert" class="hidden mb-4 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-xl">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">🚨</span>
+                    <div class="flex-1">
+                        <div class="font-bold text-red-800">检测到敏感词</div>
+                        <div class="text-sm text-red-600 mt-1" id="sensitiveSummary"></div>
+                        <div id="sensitiveDetails" class="mt-2 max-h-40 overflow-y-auto text-xs text-red-700 bg-white/50 p-2 rounded"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 敏感词检测通过 -->
+            <div id="sensitivePass" class="hidden mb-4 p-4 bg-green-50 border-l-4 border-green-400 rounded-r-xl">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <div class="font-bold text-green-800">未检测到敏感词</div>
+                        <div class="text-sm text-green-600">所有文案均已通过敏感词检测</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 文案列表 -->
+            <div id="resultContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = [];
+        let rawDataCache = '';
+        let selectedIndustry = 'general';
+        let industries = {};
+        let lengths = {};
+
+        async function init() {
+            await loadConfig();
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/config');
+                const data = await res.json();
+                if (data.success) {
+                    industries = data.industries;
+                    lengths = data.lengths;
+                    renderIndustries();
+                }
+            } catch (err) {
+                console.error('加载配置失败:', err);
+            }
+        }
+
+        function renderIndustries() {
+            const select = document.getElementById('industrySelect');
+            select.innerHTML = Object.entries(industries).map(([key, info]) => 
+                `<option value="${key}">${info.name}</option>`
+            ).join('');
+            
+            select.value = 'general';
+            selectedIndustry = 'general';
+            document.getElementById('industryDesc').textContent = industries['general'].description;
+            
+            select.addEventListener('change', (e) => {
+                selectedIndustry = e.target.value;
+                document.getElementById('industryDesc').textContent = industries[selectedIndustry].description;
+            });
+        }
+
+        function logout() {
+            fetch('/logout').then(() => window.location.href = '/');
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = percent + '%';
+        }
+
+        async function generate() {
+            const rawData = document.getElementById('rawData').value.trim();
+            
+            if (!rawData || rawData.length < 30) {
+                alert('请填写完整的客户资料');
+                return;
+            }
+
+            rawDataCache = rawData;
+            
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            document.getElementById('btnText').innerHTML = '生成中...';
+            document.getElementById('progressArea').classList.remove('hidden');
+            
+            try {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 3;
+                    if (progress > 90) clearInterval(interval);
+                    updateProgress(progress);
+                }, 800);
+                
+                // 默认生成短文案
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        raw_data: rawData, 
+                        industry: selectedIndustry,
+                        length: 'short'  // 默认短文案
+                    })
+                });
+                
+                clearInterval(interval);
+                updateProgress(100);
+                
+                const result = await res.json();
+                
+                if (result.success) {
+                    currentResults = result.copywrites;
+                    
+                    document.getElementById('totalCount').textContent = result.total;
+                    document.getElementById('passCount').textContent = result.passed;
+                    document.getElementById('failCount').textContent = result.failed;
+                    
+                    renderResults(currentResults);
+                    
+                    setTimeout(() => {
+                        document.getElementById('resultArea').classList.remove('hidden');
+                        document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+                        document.getElementById('progressArea').classList.add('hidden');
+                        updateProgress(0);
+                    }, 300);
+                } else {
+                    alert('生成失败：' + result.error);
+                }
+            } catch (err) {
+                alert('网络错误：' + err.message);
+            } finally {
+                btn.disabled = false;
+                document.getElementById('btnText').innerHTML = '✨ 生成30条短文案';
+            }
+        }
+
+        function renderResults(copywrites) {
+            const container = document.getElementById('resultContainer');
+            
+            container.innerHTML = copywrites.map((item) => {
+                // 判断是否需要重新生成：字数不对、有具体地址、称呼重复等
+                const needRegen = !item.quality_pass && item.word_count > 0;
+                const isFail = item.word_count === 0;
+                const cardClass = isFail ? 'fail' : (item.quality_pass ? 'success' : '');
+                const lenTag = item.length_type === 'long' ? 'tag-green' : 'tag-orange';
+                const lenName = item.length_type === 'long' ? '长' : '短';
+                
+                let statusBadge = '';
+                if (item.quality_pass) {
+                    statusBadge = '<span class="text-xs text-green-600 font-medium ml-2">✓ 合格</span>';
+                } else if (needRegen) {
+                    statusBadge = '<span class="text-xs text-orange-600 font-medium ml-2">⚠ 需优化</span>';
+                }
+                
+                return `
+                <div class="copy-card ${cardClass}" data-index="${item.index}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-2xl font-bold text-gray-200">#${item.index}</span>
+                            <span class="tag tag-purple">${item.style}</span>
+                            <span class="tag tag-blue">${item.angle}</span>
+                            <span class="tag ${lenTag}">${lenName} ${item.word_count}字</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="flex items-center gap-1">
+                            ${isFail || item.word_count < 120 ? `<button onclick="regenerateOne(${item.index}, '${item.length_type || 'short'}')" id="regen-${item.index}" class="btn-switch mr-2">🔄 重新生成</button>` : ''}
+                            
+                            ${item.quality_pass && item.length_type === 'short' ? 
+                                `<button onclick="regenerateOne(${item.index}, 'long')" id="switch-${item.index}" class="btn-switch mr-2">📖 长文案</button>` : ''
+                            }
+                            ${item.quality_pass && item.length_type === 'long' ? 
+                                `<button onclick="regenerateOne(${item.index}, 'short')" id="switch-${item.index}" class="btn-switch mr-2">⚡ 短文案</button>` : ''
+                            }
+                            
+                            <div class="btn-icon text-gray-400 hover:text-blue-600" onclick="editOne(${item.index})" title="编辑">✏️</div>
+                            <div class="btn-icon text-gray-400 hover:text-green-600" onclick="copyOne(${item.index})" title="复制">📋</div>
+                        </div>
+                    </div>
+                    <div class="text-gray-800 text-[15px] leading-relaxed whitespace-pre-line" id="content-${item.index}">${item.content}</div>
+                    ${item.issues?.length ? `<div class="mt-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">⚠ ${item.issues.join('，')}</div>` : ''}
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 重新生成单条 - 只更新这一条卡片
+        async function regenerateOne(index, targetLength) {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/regenerate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        raw_data: rawDataCache, 
+                        index: index,
+                        industry: selectedIndustry,
+                        length: targetLength
+                    })
+                });
+                
+                const result = await res.json();
+                
+                if (result.success) {
+                    // 更新数据
+                    const idx = currentResults.findIndex(c => c.index === index);
+                    if (idx >= 0) {
+                        currentResults[idx] = result.copywrite;
+                    }
+                    
+                    // 只更新这一条卡片
+                    updateSingleCard(result.copywrite);
+                    
+                    // 更新统计
+                    const passed = currentResults.filter(c => c.quality_pass).length;
+                    const failed = currentResults.filter(c => c.word_count === 0).length;
+                    const needOptimize = currentResults.filter(c => !c.quality_pass && c.word_count > 0).length;
+                    document.getElementById('passCount').textContent = passed;
+                    document.getElementById('failCount').textContent = failed + needOptimize;
+                } else {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert('重新生成失败：' + result.error);
+                }
+            } catch (err) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('网络错误');
+            }
+        }
+        
+        // 更新单条卡片内容
+        function updateSingleCard(item) {
+            const card = document.querySelector(`[data-index="${item.index}"]`);
+            if (!card) return;
+            
+            const needRegen = !item.quality_pass && item.word_count > 0;
+            const isFail = item.word_count === 0;
+            const cardClass = isFail ? 'fail' : (item.quality_pass ? 'success' : '');
+            const lenTag = item.length_type === 'long' ? 'tag-green' : 'tag-orange';
+            const lenName = item.length_type === 'long' ? '长' : '短';
+            
+            let statusBadge = '';
+            if (item.quality_pass) {
+                statusBadge = '<span class="text-xs text-green-600 font-medium ml-2">✓ 合格</span>';
+            } else if (needRegen) {
+                statusBadge = '<span class="text-xs text-orange-600 font-medium ml-2">⚠ 需优化</span>';
+            }
+            
+            // 构建按钮
+            let buttonsHtml = '';
+            if (isFail || needRegen) {
+                buttonsHtml += `<button onclick="regenerateOne(${item.index}, 'short')" class="btn-switch mr-2">🔄 重新生成</button>`;
+            }
+            if (item.quality_pass && item.length_type === 'short') {
+                buttonsHtml += `<button onclick="regenerateOne(${item.index}, 'long')" class="btn-switch mr-2">📖 长文案</button>`;
+            }
+            if (item.quality_pass && item.length_type === 'long') {
+                buttonsHtml += `<button onclick="regenerateOne(${item.index}, 'short')" class="btn-switch mr-2">⚡ 短文案</button>`;
+            }
+            
+            card.className = `copy-card ${cardClass}`;
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-2xl font-bold text-gray-200">#${item.index}</span>
+                        <span class="tag tag-purple">${item.style}</span>
+                        <span class="tag tag-blue">${item.angle}</span>
+                        <span class="tag ${lenTag}">${lenName} ${item.word_count}字</span>
+                        ${statusBadge}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        ${buttonsHtml}
+                        <div class="btn-icon text-gray-400 hover:text-blue-600" onclick="editOne(${item.index})" title="编辑">✏️</div>
+                        <div class="btn-icon text-gray-400 hover:text-green-600" onclick="copyOne(${item.index})" title="复制">📋</div>
+                    </div>
+                </div>
+                <div class="text-gray-800 text-[15px] leading-relaxed whitespace-pre-line" id="content-${item.index}">${item.content}</div>
+                ${item.issues?.length ? `<div class="mt-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">⚠ ${item.issues.join('，')}</div>` : ''}
+            `;
+        }
+
+        // 编辑功能
+        function editOne(index) {
+            const item = currentResults.find(c => c.index === index);
+            const contentDiv = document.getElementById(`content-${index}`);
+            
+            contentDiv.innerHTML = `
+                <textarea id="edit-${index}" class="w-full p-3 border-2 border-blue-300 rounded-lg text-[15px]" rows="4">${item.content}</textarea>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="text-xs text-gray-500" id="edit-stats-${index}">${item.content.length}字</span>
+                    <div class="flex gap-2">
+                        <button onclick="cancelEdit(${index})" class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                        <button onclick="saveEdit(${index})" class="px-3 py-1 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded">保存</button>
+                    </div>
+                </div>
+            `;
+            
+            const textarea = document.getElementById(`edit-${index}`);
+            textarea.focus();
+            textarea.addEventListener('input', function() {
+                document.getElementById(`edit-stats-${index}`).textContent = this.value.length + '字';
+            });
+        }
+
+        function cancelEdit(index) {
+            const item = currentResults.find(c => c.index === index);
+            document.getElementById(`content-${index}`).innerHTML = item.content;
+        }
+
+        function saveEdit(index) {
+            const item = currentResults.find(c => c.index === index);
+            const newContent = document.getElementById(`edit-${index}`).value.trim();
+            if (!newContent) return alert('内容不能为空');
+            
+            item.content = newContent;
+            item.word_count = newContent.length;
+            
+            const lenInfo = lengths[item.length_type] || lengths.short;
+            item.quality_pass = newContent.length >= lenInfo.min && newContent.length <= lenInfo.max + 30;
+            
+            renderResults(currentResults);
+            
+            const passed = currentResults.filter(c => c.quality_pass).length;
+            document.getElementById('passCount').textContent = passed;
+        }
+
+        function copyOne(index) {
+            const item = currentResults.find(c => c.index === index);
+            navigator.clipboard.writeText(item.content).then(() => {
+                const btn = event.target.closest('.btn-icon');
+                btn.innerHTML = '✓';
+                setTimeout(() => btn.innerHTML = '📋', 1500);
+            });
+        }
+
+        function copyAll() {
+            if (currentResults.length === 0) return;
+            const text = currentResults.map(item => 
+                `【${item.style}·${item.angle}·${item.length_type === 'long' ? '长' : '短'}】\n${item.content}\n`
+            ).join('\n─────────────\n\n');
+            navigator.clipboard.writeText(text).then(() => alert(`已复制${currentResults.length}条`));
+        }
+
+        function downloadTxt() {
+            if (currentResults.length === 0) return;
+            const text = currentResults.map(item => 
+                `【${item.style}·${item.angle}·${item.length_type === 'long' ? '长' : '短'}】${item.word_count}字\n${item.content}\n`
+            ).join('\n─────────────\n\n');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `文案_${selectedIndustry}_${new Date().toLocaleDateString()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // 敏感词检测
+        async function checkAllSensitive() {
+            if (currentResults.length === 0) {
+                alert('请先生成文案');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '检测中...';
+            btn.disabled = true;
+            
+            // 隐藏之前的提示
+            document.getElementById('sensitiveAlert').classList.add('hidden');
+            document.getElementById('sensitivePass').classList.add('hidden');
+            
+            try {
+                const res = await fetch('/check_all_sensitive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ copywrites: currentResults })
+                });
+                
+                const result = await res.json();
+                
+                if (result.success) {
+                    if (result.affected_count > 0) {
+                        // 有敏感词
+                        document.getElementById('sensitiveSummary').textContent = 
+                            `发现 ${result.total_sensitive} 个敏感词，涉及 ${result.affected_count} 条文案`;
+                        
+                        // 详情
+                        const details = result.results
+                            .filter(r => r.has_sensitive)
+                            .map(r => `#${r.index}: ${r.sensitive_words.join('、')}`)
+                            .join('\n');
+                        document.getElementById('sensitiveDetails').textContent = details;
+                        
+                        document.getElementById('sensitiveAlert').classList.remove('hidden');
+                        document.getElementById('sensitiveAlert').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        // 无敏感词
+                        document.getElementById('sensitivePass').classList.remove('hidden');
+                        setTimeout(() => {
+                            document.getElementById('sensitivePass').classList.add('hidden');
+                        }, 3000);
+                    }
+                } else {
+                    alert('检测失败：' + result.error);
+                }
+            } catch (err) {
+                alert('检测失败：' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
