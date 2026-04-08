@@ -322,61 +322,162 @@ KIMI_API_KEY = "sk-IA6qyNJFSYC8UB9RHnGHsgz24VWSrKalSnd5nTTbJNiqQ2uu"
 def get_kimi_client():
     return OpenAI(api_key=KIMI_API_KEY, base_url="https://api.moonshot.cn/v1")
 
+# ==================== 专业调教系统指令 ====================
+SYSTEM_PROMPT = """你是一位短视频文案大师，专为实体店主/企业主创作高转化短视频文案。
+
+【黄金三秒原则 - 硬性约束】
+1. 严禁前3秒出现：自我介绍("大家好我是XX")、店名、经营地址
+2. 开头必须用"利益、冲突、悬念、扎心"四选一：
+   - 利益："别再交这种智商税了"
+   - 冲突："邢台的老板们，别再发这种垃圾朋友圈了"
+   - 悬念："做了15年餐饮，今天说个得罪人的真相"
+   - 扎心："你知道吗？90%的装修钱都被这东西坑走了"
+
+【单一主题逻辑 - 内容分配】
+- 30%干货避坑：揭露行业内幕、避坑指南
+- 30%人设故事：老板个人经历、创业故事
+- 20%细节特写：产品细节、工艺细节、服务细节
+- 20%认知反转：打破常识、颠覆认知
+
+【语义降维 - 禁用词汇】
+严禁使用：匠心、坚守、高端、高效、实战、回味无穷、专业、品质、服务
+必须转化为：
+- "食材新鲜" → "龙虾在水里打架，腮白肉肥"
+- "经验丰富" → "这二十年，手里的茧子磨掉了一层又一层"
+- "做工精细" → "这个缝我拆了7遍，直到完全对齐"
+
+【拍摄与合规约束】
+- 画面只有一人出镜，不出现客户
+- 场景描述由口播完成，不复刻回忆画面
+- 禁止最、绝对、第一等违禁词
+- 禁止具体地址如"XX路XX号"
+
+【5%重复率过滤】
+- 同一批5条文案，核心动词重合度不超过10%
+- 场景轮换：工作台、店门口、茶歇区、货架旁
+
+【KPI自检标准】
+1. 钩子力：开头3秒让用户"别划走"
+2. 口语化：念起来顺口，无书面语
+3. 颗粒度：有具体数字、细节、画面感
+4. 情绪值：带情绪的交谈，非冷冰冰科普
+5. 转化力：结尾引导自然且有诱惑力"""
+
+# ==================== 文案类型模板 ====================
+CONTENT_TEMPLATES = {
+    "干货避坑": {
+        "hook": ["别再交这种智商税了", "今天说个得罪人的真相", "这个行业没人敢说的秘密", "90%的人都踩过这个坑"],
+        "focus": "揭露行业内幕、避坑指南",
+        "style": "直接指出问题，给出解决方案"
+    },
+    "人设故事": {
+        "hook": ["做了15年，我想说说心里话", "从欠债到翻身，就这一步", "当年那个决定，改变了我的一生", "有人问我为什么这么拼"],
+        "focus": "老板个人经历、创业故事、转折点",
+        "style": "真实、有细节、有情感"
+    },
+    "细节特写": {
+        "hook": ["你看这个细节，一般人不会注意", "就是这不起眼的地方", "花了3天，就为这1毫米", "有人笑我傻，看完沉默了"],
+        "focus": "产品/工艺/服务的具体细节",
+        "style": "具象化、有画面感、可感知"
+    },
+    "认知反转": {
+        "hook": ["你以为的，其实是错的", "打破常识，这行不是这么做的", "所有人都告诉我这样做，但我偏不", "这个真相，可能会得罪同行"],
+        "focus": "颠覆常识、打破认知",
+        "style": "先破后立、引发思考"
+    }
+}
+
 # ==================== 生成文案 ====================
 def generate_single_copywrite(raw_data, config, industry="general", length="short", retries=3):
-    """生成单条文案"""
+    """生成单条文案 - 使用专业调教系统"""
     industry_info = INDUSTRIES.get(industry, INDUSTRIES["general"])
     name_match = re.search(r'出镜称呼[：:]\s*(\S+)', raw_data)
     name = name_match.group(1) if name_match else "老板"
     
     min_words, max_words = (150, 180) if length == "short" else (200, 300)
     
+    # 根据序号分配内容类型
+    content_types = ["干货避坑", "人设故事", "细节特写", "认知反转"]
+    content_type = content_types[(config['idx'] - 1) % 4]
+    template = CONTENT_TEMPLATES[content_type]
+    
+    # 选择该类型的开场钩子
+    hook_index = (config['idx'] - 1) // 4 % len(template["hook"])
+    forced_hook = template["hook"][hook_index]
+    
     for attempt in range(retries):
-        prompt = f"""根据资料写第{config['idx']}条短视频文案。
-【行业】{industry_info['name']}
-【风格】{config['style']}【角度】{config['angle']}【开头】{config['hook']}
-【客户资料】{raw_data[:400]}
+        prompt = f"""根据以下信息创作第{config['idx']}条短视频文案。
 
-【写作要求】
-1. 字数：严格{min_words}-{max_words}字（必须遵守）
-2. 开头：{config['hook']}方式
-3. 称呼："{name}"最多3次，多用"咱"
-4. 禁止具体地址如"XX路XX号"
-5. 口语化，真实自然
+【内容类型】{content_type}
+【类型说明】{template["focus"]}
+【风格要求】{template["style"]}
 
-直接写文案："""
+【客户资料】{raw_data[:500]}
+【出镜称呼】{name}
+
+【硬性要求】
+1. 字数：{min_words}-{max_words}字（严格限制）
+2. 开头：必须用"{forced_hook}"或类似钩子开场，禁止自我介绍和店名
+3. 称呼："{name}"出现不超过2次，多用"我""咱"
+4. 细节：必须包含至少1个具体数字或感官细节
+5. 结尾：自然引导互动，不生硬求关注
+6. 场景：在"工作台/店门口/货架旁/操作区"中选择一个
+
+直接输出文案："""
         
         try:
             client = get_kimi_client()
             response = client.chat.completions.create(
                 model="moonshot-v1-8k",
                 messages=[
-                    {"role": "system", "content": "你是短视频文案专家。"},
+                    {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=400,
-                temperature=0.8,
-                timeout=30
+                max_tokens=500,
+                temperature=0.85,
+                timeout=35
             )
             content = response.choices[0].message.content.strip()
+            
+            # 清理可能的引号
+            if content.startswith('"') and content.endswith('"'):
+                content = content[1:-1]
+            
             word_count = len(content.replace(' ', '').replace('\n', ''))
             name_count = content.count(name)
             has_address = bool(re.search(r'[路街道]\s*\d+[号]', content))
+            has_self_intro = bool(re.search(r'^(大家好|我是|我叫|我们店|我们这里是)', content))
             sensitive = check_sensitive_words(content)
             
             issues = []
             if word_count < min_words: issues.append(f"字数不足({word_count}字)")
             elif word_count > max_words: issues.append(f"字数超标({word_count}字)")
             if has_address: issues.append("有具体地址")
+            if has_self_intro: issues.append("开头有自我介绍")
+            if name_count > 2: issues.append(f"称呼{name}出现{name_count}次")
             if sensitive: issues.append(f"敏感词: {', '.join(sensitive[:2])}")
             
-            quality_pass = min_words <= word_count <= max_words and not has_address and not sensitive
+            # 质量通过标准
+            quality_pass = (
+                min_words <= word_count <= max_words and 
+                not has_address and 
+                not has_self_intro and
+                name_count <= 2 and
+                len(sensitive) == 0
+            )
             
             return {
-                'index': config['idx'], 'content': content, 'word_count': word_count,
-                'name_count': name_count, 'quality_pass': quality_pass,
-                'length_type': length, 'style': config['style'], 
-                'angle': config['angle'], 'hook': config['hook'], 'issues': issues
+                'index': config['idx'], 
+                'content': content, 
+                'word_count': word_count,
+                'name_count': name_count, 
+                'quality_pass': quality_pass,
+                'length_type': length, 
+                'style': config['style'], 
+                'angle': config['angle'], 
+                'hook': forced_hook,
+                'content_type': content_type,
+                'issues': issues
             }
         except Exception as e:
             error_msg = str(e)
@@ -384,11 +485,16 @@ def generate_single_copywrite(raw_data, config, industry="general", length="shor
                 return {
                     'index': config['idx'], 
                     'content': f"❌ 生成失败: {error_msg[:40]}..." if len(error_msg) > 40 else f"❌ 生成失败: {error_msg}", 
-                    'word_count': 0, 'quality_pass': False, 'length_type': length, 
-                    'style': config['style'], 'angle': config['angle'], 'hook': config['hook'], 
+                    'word_count': 0, 
+                    'quality_pass': False, 
+                    'length_type': length, 
+                    'style': config['style'], 
+                    'angle': config['angle'], 
+                    'hook': forced_hook,
+                    'content_type': content_type,
                     'issues': [f"API错误"]
                 }
-            time.sleep(1)
+            time.sleep(1.5)
             continue
     return None
 
@@ -444,6 +550,22 @@ def main():
             index=0,
             label_visibility="collapsed"
         )
+        
+        st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
+        
+        # 内容类型分配
+        with st.expander("📚 内容类型分配（点击展开）"):
+            st.markdown("""
+            **30条文案自动分配：**
+            - 🔴 **干货避坑** (30%)：揭露行业内幕、避坑指南
+            - 🟣 **人设故事** (30%)：老板个人经历、创业故事
+            - 🟡 **细节特写** (20%)：产品/工艺的具体细节
+            - 🟢 **认知反转** (20%)：颠覆常识、打破认知
+            
+            **黄金三秒原则：**
+            - ❌ 禁止自我介绍、店名、地址
+            - ✅ 必须用利益/冲突/悬念/扎心开场
+            """)
         
         st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
         
@@ -563,10 +685,20 @@ def main():
                 card_class = "error" if is_fail else ("warning" if is_warning else "success")
                 len_class = "tag-green" if item['length_type'] == 'long' else "tag-orange"
                 len_name = "长文案" if item['length_type'] == 'long' else "短文案"
+                content_type = item.get('content_type', '通用')
+                
+                # 内容类型颜色
+                type_colors = {
+                    "干货避坑": "#ef4444",
+                    "人设故事": "#8b5cf6", 
+                    "细节特写": "#f59e0b",
+                    "认知反转": "#10b981"
+                }
+                type_color = type_colors.get(content_type, "#667eea")
                 
                 # 状态标识
                 if item['quality_pass']:
-                    status_html = '<span class="status-badge status-success">✓ 合格</span>'
+                    status_html = '<span class="status-badge status-success">✓ 优质</span>'
                 elif is_fail:
                     status_html = '<span class="status-badge status-error">✗ 失败</span>'
                 else:
@@ -575,10 +707,9 @@ def main():
                 st.markdown(f"""
                 <div class="copy-card {card_class}">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
-                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <span style="font-size:28px; font-weight:800; color:#e2e8f0;">#{item['index']}</span>
-                            <span class="tag tag-purple">{item['style']}</span>
-                            <span class="tag tag-blue">{item['angle']}</span>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span style="font-size:26px; font-weight:800; color:#e2e8f0;">#{item['index']}</span>
+                            <span class="tag" style="background:{type_color};color:white;font-weight:600;">{content_type}</span>
                             <span class="tag {len_class}">{len_name} · {item['word_count']}字</span>
                             {status_html}
                         </div>
