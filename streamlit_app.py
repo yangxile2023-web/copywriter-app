@@ -18,32 +18,30 @@ st.set_page_config(
 # 密码验证
 def check_password():
     """返回 True 如果密码正确"""
-    def password_entered():
-        if hashlib.sha256(st.session_state["password"].encode()).hexdigest() == \
-           "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
     if "password_correct" not in st.session_state:
-        st.text_input(
-            "请输入密码", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input(
-            "密码错误，请重试", 
-            type="password", 
-            on_change=password_entered, 
-            key="password"
-        )
-        return False
-    else:
+        st.session_state["password_correct"] = False
+    
+    if st.session_state["password_correct"]:
         return True
+    
+    # 登录界面
+    st.title("🔐 晓牧传媒文案助手")
+    st.caption("v4.1 · 请先登录")
+    
+    with st.form("login_form"):
+        password = st.text_input("请输入密码", type="password")
+        submitted = st.form_submit_button("🔓 登录", use_container_width=True)
+        
+        if submitted:
+            # 密码是 88886666 的 SHA256
+            if hashlib.sha256(password.encode()).hexdigest() == \
+               "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92":
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else:
+                st.error("❌ 密码错误，请重试")
+    
+    return False
 
 # 样式
 st.markdown("""
