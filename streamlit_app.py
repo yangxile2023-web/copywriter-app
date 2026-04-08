@@ -35,7 +35,7 @@ def check_password():
         if submitted:
             # 密码是 88886666 的 SHA256
             if hashlib.sha256(password.encode()).hexdigest() == \
-               "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92":
+               "75555c8152b4f91d00e1eaec2dc101e57ab80418fab47529e2f7acdb7f8517cf":
                 st.session_state["password_correct"] = True
                 st.rerun()
             else:
