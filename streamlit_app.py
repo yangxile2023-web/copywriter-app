@@ -134,39 +134,8 @@ st.markdown("""
 
 # ==================== 密码验证 ====================
 def check_password():
-    """返回 True 如果密码正确"""
-    if "password_correct" not in st.session_state:
-        st.session_state["password_correct"] = False
-    
-    if st.session_state["password_correct"]:
-        return True
-    
-    # 居中登录框
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style="text-align: center; padding: 40px; background: rgba(255,255,255,0.9); border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1);">
-            <div style="font-size: 64px; margin-bottom: 20px;">✍️</div>
-            <h1 style="margin-bottom: 10px;">晓牧传媒文案助手</h1>
-            <p style="color: #6b7280; margin-bottom: 30px;">v4.1 · 短视频文案生成工具</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("login_form"):
-            password = st.text_input("请输入密码", type="password", label_visibility="collapsed", 
-                                    placeholder="请输入访问密码...")
-            submitted = st.form_submit_button("🔓 登录", use_container_width=True)
-            
-            if submitted:
-                if hashlib.sha256(password.encode()).hexdigest() == \
-                   "75555c8152b4f91d00e1eaec2dc101e57ab80418fab47529e2f7acdb7f8517cf":
-                    st.session_state["password_correct"] = True
-                    st.rerun()
-                else:
-                    st.error("❌ 密码错误，请重试")
-    
-    return False
+    """密码验证已关闭，方便测试"""
+    return True
 
 # ==================== 配置数据 ====================
 INDUSTRIES = {
