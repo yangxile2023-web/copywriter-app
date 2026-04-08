@@ -159,7 +159,7 @@ def get_kimi_client():
     return OpenAI(api_key=KIMI_API_KEY, base_url="https://api.moonshot.cn/v1")
 
 # ==================== 生成文案 ====================
-def generate_single_copywrite(raw_data, config, industry="general", length="short", retries=2):
+def generate_single_copywrite(raw_data, config, industry="general", length="short", retries=3):
     """生成单条文案"""
     industry_info = INDUSTRIES.get(industry, INDUSTRIES["general"])
     name_match = re.search(r'出镜称呼[：:]\s*(\S+)', raw_data)
@@ -192,7 +192,7 @@ def generate_single_copywrite(raw_data, config, industry="general", length="shor
                 ],
                 max_tokens=400,
                 temperature=0.8,
-                timeout=15
+                timeout=30
             )
             content = response.choices[0].message.content.strip()
             word_count = len(content.replace(' ', '').replace('\n', ''))
@@ -215,8 +215,23 @@ def generate_single_copywrite(raw_data, config, industry="general", length="shor
                 'angle': config['angle'], 'hook': config['hook'], 'issues': issues
             }
         except Exception as e:
+            error_msg = str(e)
             if attempt == retries - 1:
-                return None
+                # 最后一次失败，返回带错误信息的失败项
+                return {
+                    'index': config['idx'], 
+                    'content': f"生成失败: {error_msg[:50]}..." if len(error_msg) > 50 else f"生成失败: {error_msg}", 
+                    'word_count': 0,
+                    'quality_pass': False,
+                    'length_type': length, 
+                    'style': config['style'], 
+                    'angle': config['angle'],
+                    'hook': config['hook'], 
+                    'issues': [f"API错误: {error_msg[:30]}..."]
+                }
+            # 等待一下再重试
+            import time
+            time.sleep(1)
             continue
     return None
 
