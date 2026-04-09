@@ -5,188 +5,283 @@ import time
 from openai import OpenAI
 from sensitive_words import check_sensitive_words
 
-# 页面配置
-st.set_page_config(
-    page_title="晓牧传媒文案助手",
-    page_icon="📝",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="晓牧传媒文案助手", page_icon="✨", layout="wide")
 
-# 自定义CSS
+# 深色主题CSS
 st.markdown("""
 <style>
-    .stApp { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .main .block-container { max-width: 1600px; padding: 1rem 2rem; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * { font-family: 'Inter', 'Noto Sans SC', sans-serif !important; }
+    
+    .stApp {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+    }
+    
+    .main .block-container {
+        max-width: 1400px;
+        padding: 2rem;
+    }
+    
     #MainMenu, header, footer { display: none !important; }
     
-    .header-title {
+    /* 头部 */
+    .app-header {
         text-align: center;
-        color: white;
-        padding: 1rem 0 2rem 0;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
     }
-    .header-title h1 {
+    
+    .app-header h1 {
         color: white !important;
         font-size: 2.5rem;
         font-weight: 700;
         margin: 0;
+        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
-    .header-title p {
-        color: rgba(255,255,255,0.85);
+    
+    .app-header p {
+        color: rgba(255,255,255,0.6);
         font-size: 1rem;
-        margin: 0.5rem 0 0 0;
+        margin-top: 0.5rem;
     }
     
-    .panel {
-        background: white;
-        border-radius: 16px;
+    /* 玻璃态卡片 */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    
-    .stat-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
         margin-bottom: 1.5rem;
     }
     
-    .stat-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 1rem;
+    /* 输入框样式 */
+    .stTextArea textarea {
+        background: rgba(255,255,255,0.08) !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        border-radius: 16px !important;
+        color: white !important;
+        padding: 1.2rem !important;
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+    }
+    
+    .stTextArea textarea::placeholder {
+        color: rgba(255,255,255,0.4) !important;
+    }
+    
+    .stTextArea textarea:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    /* 选择器 */
+    .stSelectbox > div > div {
+        background: rgba(255,255,255,0.08) !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        border-radius: 12px !important;
+        color: white !important;
+    }
+    
+    /* 按钮 */
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        padding: 1rem 2rem !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: white !important;
+        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4) !important;
+        transition: all 0.3s !important;
+    }
+    
+    .stButton>button[kind="primary"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5) !important;
+    }
+    
+    /* 标签样式 */
+    .content-tag {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+        color: white;
+    }
+    
+    .tag-red { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+    .tag-purple { background: linear-gradient(135deg, #a855f7, #9333ea); }
+    .tag-yellow { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1a1a2e; }
+    .tag-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .tag-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    
+    /* 统计卡片 */
+    .stat-card {
+        background: rgba(255,255,255,0.05);
+        border-radius: 16px;
+        padding: 1.25rem;
         text-align: center;
-        border: 1px solid #e2e8f0;
+        border: 1px solid rgba(255,255,255,0.1);
     }
+    
     .stat-value {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        color: #667eea;
-        line-height: 1;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
+    
     .stat-label {
-        font-size: 0.875rem;
-        color: #64748b;
+        color: rgba(255,255,255,0.6);
+        font-size: 0.9rem;
         margin-top: 0.25rem;
     }
     
+    /* 结果卡片 */
     .result-card {
-        background: white;
-        border-radius: 12px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 16px;
         padding: 1.25rem;
         margin-bottom: 1rem;
-        border-left: 4px solid #667eea;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        transition: all 0.3s;
     }
-    .result-card.success { border-left-color: #22c55e; }
-    .result-card.warning { border-left-color: #f59e0b; }
-    .result-card.error { border-left-color: #ef4444; background: #fef2f2; }
+    
+    .result-card:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: rgba(255,255,255,0.15);
+        transform: translateY(-2px);
+    }
     
     .card-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        align-items: flex-start;
+        margin-bottom: 1rem;
     }
     
     .card-meta {
         display: flex;
-        align-items: center;
         gap: 0.5rem;
+        align-items: center;
     }
     
-    .idx-num {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #e2e8f0;
+    .idx-badge {
+        width: 36px;
+        height: 36px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: rgba(255,255,255,0.5);
+        font-size: 0.9rem;
     }
     
-    .badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .badge-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
-    .badge-secondary { background: #e0e7ff; color: #4338ca; }
-    .badge-accent { background: #fef3c7; color: #92400e; }
-    .badge-success { background: #d1fae5; color: #065f46; }
-    
-    .status-tag {
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .tag-ok { background: #d1fae5; color: #065f46; }
-    .tag-warn { background: #fef3c7; color: #92400e; }
-    .tag-err { background: #fee2e2; color: #991b1b; }
-    
-    .content-box {
-        background: #f8fafc;
-        border-radius: 8px;
+    .content-text {
+        background: rgba(0,0,0,0.2);
+        border-radius: 12px;
         padding: 1rem;
-        border: 1px solid #e2e8f0;
-        line-height: 1.7;
+        color: rgba(255,255,255,0.9);
+        line-height: 1.8;
         font-size: 0.95rem;
-        color: #1e293b;
-        margin-bottom: 0.75rem;
+        margin-bottom: 1rem;
     }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .status-warn { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .status-err { background: rgba(239, 68, 68, 0.2); color: #f87171; }
     
     .issue-tag {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        color: #9a3412;
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        color: #fbbf24;
         padding: 0.5rem 0.75rem;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 0.8rem;
         margin-bottom: 0.75rem;
     }
     
-    @media (max-width: 1200px) {
-        .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .action-btn {
+        background: rgba(255,255,255,0.08) !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        color: white !important;
+        border-radius: 10px !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.85rem !important;
     }
     
-    @media (max-width: 768px) {
-        .stat-grid { grid-template-columns: 1fr; }
-        .header-title h1 { font-size: 1.75rem; }
+    .action-btn:hover {
+        background: rgba(255,255,255,0.15) !important;
+    }
+    
+    /* 折叠面板 */
+    .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.05) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: white !important;
+    }
+    
+    /* 分割线 */
+    .custom-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        margin: 1.5rem 0;
+    }
+    
+    /* 标签页样式 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.05);
+        padding: 0.5rem;
+        border-radius: 12px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        color: rgba(255,255,255,0.6) !important;
+        border-radius: 8px !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: rgba(102, 126, 234, 0.3) !important;
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # 配置
 INDUSTRIES = {
-    "catering": {"name": "餐饮", "desc": "突出食材新鲜、口味独特"},
-    "woodwork": {"name": "木作定制", "desc": "强调工艺精湛、材质环保"},
-    "factory": {"name": "工厂/制造", "desc": "展现生产实力、质量把控"},
-    "lottery": {"name": "彩票店", "desc": "分享中奖故事、客户好运"},
-    "hotel": {"name": "酒店/民宿", "desc": "描述温馨环境、贴心服务"},
-    "general": {"name": "通用", "desc": "根据行业特点突出优势"}
+    "catering": "餐饮",
+    "woodwork": "木作定制",
+    "factory": "工厂/制造",
+    "lottery": "彩票店",
+    "hotel": "酒店/民宿",
+    "general": "通用"
 }
 
 CONTENT_TYPES = {
-    "干货避坑": {"color": "#ef4444"},
-    "人设故事": {"color": "#8b5cf6"},
-    "细节特写": {"color": "#f59e0b"},
-    "认知反转": {"color": "#10b981"}
+    "干货避坑": {"color": "#ff6b6b", "class": "tag-red"},
+    "人设故事": {"color": "#a855f7", "class": "tag-purple"},
+    "细节特写": {"color": "#fbbf24", "class": "tag-yellow"},
+    "认知反转": {"color": "#22c55e", "class": "tag-green"}
 }
-
-STYLES = ["轻松", "温馨", "真诚", "励志", "接地气", "怀旧"]
-ANGLES = ["个人故事", "顾客见证", "行业见解", "创业历程", "日常趣事", "价值观分享", "对比反差", "情感共鸣"]
-
-KIMI_API_KEY = "sk-IA6qyNJFSYC8UB9RHnGHsgz24VWSrKalSnd5nTTbJNiqQ2uu"
-
-@st.cache_resource
-def get_client():
-    return OpenAI(api_key=KIMI_API_KEY, base_url="https://api.moonshot.cn/v1")
-
-SYSTEM_PROMPT = """你是短视频文案大师。
-
-【黄金三秒】严禁前3秒出现自我介绍、店名、地址。开头必须用利益/冲突/悬念/扎心。
-【语义降维】严禁:匠心/高端/专业/品质。必须具象化，如"食材新鲜"→"龙虾腮白肉肥"。"""
 
 TEMPLATES = {
     "干货避坑": ["别再交这种智商税了", "今天说个得罪人的真相", "行业没人敢说的秘密"],
@@ -195,36 +290,29 @@ TEMPLATES = {
     "认知反转": ["你以为的其实是错的", "打破常识这行不是这么做的", "这真相可能得罪同行"]
 }
 
-def generate(raw_data, config, industry, length, retries=3):
+KIMI_KEY = "sk-IA6qyNJFSYC8UB9RHnGHsgz24VWSrKalSnd5nTTbJNiqQ2uu"
+
+@st.cache_resource
+def get_client():
+    return OpenAI(api_key=KIMI_KEY, base_url="https://api.moonshot.cn/v1")
+
+def generate(raw_data, idx, industry, length, retries=3):
     name = re.search(r'出镜称呼[：:]\s*(\S+)', raw_data)
     name = name.group(1) if name else "老板"
     min_w, max_w = (150, 180) if length == "short" else (200, 300)
     
     ctypes = list(CONTENT_TYPES.keys())
-    ctype = ctypes[(config['idx'] - 1) % 4]
-    hook = TEMPLATES[ctype][(config['idx'] - 1) // 4 % 3]
+    ctype = ctypes[(idx - 1) % 4]
+    hook = TEMPLATES[ctype][(idx - 1) // 4 % 3]
     
-    for attempt in range(retries):
+    for _ in range(retries):
         try:
             client = get_client()
             resp = client.chat.completions.create(
                 model="moonshot-v1-8k",
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"""创作第{config['idx']}条文案。
-
-【类型】{ctype}
-【开头】{hook}
-【称呼】{name}
-【资料】{raw_data[:500]}
-
-要求:
-1.字数{min_w}-{max_w}
-2.必须用上述开头，禁止自我介绍
-3."{name}"不超过2次
-4.包含1个具体数字或细节
-
-直接输出文案:"""}
+                    {"role": "system", "content": "你是短视频文案大师。黄金三秒：严禁自我介绍、店名、地址。语义降维：禁用匠心/高端/专业，必须具象化。"},
+                    {"role": "user", "content": f"创作第{idx}条文案。\n\n【类型】{ctype}\n【开头】{hook}\n【称呼】{name}\n【资料】{raw_data[:500]}\n\n要求:\n1.字数{min_w}-{max_w}\n2.必须用上述开头，禁止自我介绍\n3.\"{name}\"不超过2次\n4.包含1个具体数字或细节\n\n直接输出文案:"""}
                 ],
                 max_tokens=400,
                 temperature=0.85,
@@ -246,95 +334,64 @@ def generate(raw_data, config, industry, length, retries=3):
             if sens: issues.append("有敏感词")
             
             ok = min_w <= wc <= max_w and not addr and not intro and nc <= 2 and not sens
-            
-            return {
-                'idx': config['idx'], 'content': content, 'wc': wc,
-                'ok': ok, 'len': length, 'type': ctype, 'hook': hook,
-                'issues': issues, 'style': config['style'], 'angle': config['angle']
-            }
+            return {'idx': idx, 'content': content, 'wc': wc, 'ok': ok, 'len': length, 'type': ctype, 'hook': hook, 'issues': issues}
         except Exception as e:
-            if attempt == retries - 1:
-                return {
-                    'idx': config['idx'], 'content': f"生成失败: {str(e)[:30]}",
-                    'wc': 0, 'ok': False, 'len': length, 'type': ctype,
-                    'hook': hook, 'issues': ["API错误"],
-                    'style': config['style'], 'angle': config['angle']
-                }
+            if _ == retries - 1:
+                return {'idx': idx, 'content': f"生成失败: {str(e)[:30]}", 'wc': 0, 'ok': False, 'len': length, 'type': ctype, 'hook': hook, 'issues': ["API错误"]}
             time.sleep(1)
     return None
 
 def main():
     # 初始化
-    for k, v in [('items', []), ('raw', ''), ('gen', False)]:
-        if k not in st.session_state:
-            st.session_state[k] = v
+    if 'items' not in st.session_state:
+        st.session_state.items = []
+    if 'gen' not in st.session_state:
+        st.session_state.gen = False
     
     # 头部
-    st.markdown('<div class="header-title"><h1>晓牧传媒文案助手</h1><p>AI 驱动短视频文案生成工具 v4.1</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-header"><h1>晓牧传媒文案助手</h1><p>AI 驱动短视频文案生成工具</p></div>', unsafe_allow_html=True)
     
-    # 使用container控制宽度
-    main_container = st.container()
+    # 使用tab组织界面
+    tab1, tab2, tab3 = st.tabs(["生成文案", "批量管理", "设置"])
     
-    with main_container:
-        # 第一行：配置 + 输入
-        cfg_col, input_col = st.columns([1, 3])
+    with tab1:
+        # 输入区
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         
-        with cfg_col:
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown("#### 配置")
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.markdown("**行业类型**")
+            industry = st.selectbox("行业", list(INDUSTRIES.keys()), format_func=lambda x: INDUSTRIES[x], index=5, label_visibility="collapsed")
             
-            industry = st.selectbox("行业", list(INDUSTRIES.keys()), 
-                                   format_func=lambda x: INDUSTRIES[x]['name'], index=5)
-            st.caption(INDUSTRIES[industry]['desc'])
+            st.markdown("<div style='margin:1rem 0;'></div>", unsafe_allow_html=True)
             
-            st.divider()
-            length = st.radio("长度", ["short", "long"],
-                            format_func=lambda x: "短文案 (150-180字)" if x == "short" else "长文案 (200-300字)")
-            
-            with st.expander("内容类型"):
-                for t in CONTENT_TYPES:
-                    st.markdown(f"**{t}**: {t}")
-            
-            if st.session_state.items:
-                st.divider()
-                if st.button("检测敏感词", use_container_width=True):
-                    n = sum(len(check_sensitive_words(i.get('content', ''))) for i in st.session_state.items)
-                    st.error(f"发现 {n} 个敏感词") if n else st.success("无敏感词")
-                if st.button("复制全部", use_container_width=True):
-                    txt = "\n\n".join([f"【{i['type']}】\n{i['content']}" for i in st.session_state.items])
-                    st.code(txt)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("**文案长度**")
+            length = st.radio("长度", ["short", "long"], format_func=lambda x: "短文案 150-180字" if x == "short" else "长文案 200-300字", label_visibility="collapsed")
         
-        with input_col:
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown("#### 客户资料")
+        with col2:
+            st.markdown("**客户资料**")
+            raw = st.text_area("资料", height=140, placeholder="粘贴客户资料:\n\n- 出镜称呼: 王老板、李姐\n- 店铺名称、所在城市\n- 主营业务、核心卖点\n- 真实故事或经历", label_visibility="collapsed")
             
-            raw = st.text_area("资料", height=120,
-                              placeholder="粘贴客户资料（建议100字以上）:\n\n- 出镜称呼\n- 店铺名称\n- 所在城市\n- 主营业务\n- 核心卖点\n- 真实故事",
-                              label_visibility="collapsed")
-            
-            c1, c2 = st.columns([5, 1])
+            c1, c2 = st.columns([4, 1])
             with c1:
                 st.caption(f"已输入 {len(raw)} 字")
             with c2:
-                if st.button("生成30条", type="primary", disabled=st.session_state.gen, use_container_width=True):
+                if st.button("✨ 生成30条", type="primary", use_container_width=True, disabled=st.session_state.gen):
                     if len(raw) < 30:
                         st.error("资料至少30字")
                     else:
                         st.session_state.gen = True
-                        st.session_state.raw = raw
+                        st.session_state.raw_data = raw
                         st.rerun()
-            
-            st.markdown('</div>', unsafe_allow_html=True)
         
-        # 生成处理
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 生成
         if st.session_state.gen and not st.session_state.items:
-            with st.spinner("生成中..."):
-                cfgs = [{'idx': i+1, 'style': STYLES[i%6], 'angle': ANGLES[i%8]} for i in range(30)]
+            with st.spinner("正在生成..."):
                 prog = st.progress(0)
-                for i, cfg in enumerate(cfgs):
-                    r = generate(st.session_state.raw, cfg, industry, length)
+                for i in range(30):
+                    r = generate(st.session_state.raw_data, i+1, industry, length)
                     if r:
                         st.session_state.items.append(r)
                     prog.progress((i+1)/30, f"{i+1}/30")
@@ -342,98 +399,101 @@ def main():
             st.session_state.gen = False
             st.rerun()
         
-        # 结果显示
+        # 结果
         if st.session_state.items:
             # 统计
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
             total = len(st.session_state.items)
             ok = sum(1 for i in st.session_state.items if i['ok'])
             fail = sum(1 for i in st.session_state.items if i['wc'] == 0)
             warn = total - ok - fail
             
-            stats_html = f'''
-            <div class="stat-grid">
-                <div class="stat-item"><div class="stat-value">{total}</div><div class="stat-label">总数</div></div>
-                <div class="stat-item"><div class="stat-value" style="color:#22c55e">{ok}</div><div class="stat-label">优质</div></div>
-                <div class="stat-item"><div class="stat-value" style="color:#f59e0b">{warn}</div><div class="stat-label">需优化</div></div>
-                <div class="stat-item"><div class="stat-value" style="color:#ef4444">{fail}</div><div class="stat-label">失败</div></div>
-            </div>
-            '''
-            st.markdown(stats_html, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            cols = st.columns(4)
+            stats = [(total, "总数", "#667eea"), (ok, "优质", "#22c55e"), (warn, "需优化", "#fbbf24"), (fail, "失败", "#ef4444")]
+            for col, (val, lbl, clr) in zip(cols, stats):
+                with col:
+                    st.markdown(f'<div class="stat-card"><div class="stat-value" style="background: linear-gradient(135deg, {clr}, {clr}aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{val}</div><div class="stat-label">{lbl}</div></div>', unsafe_allow_html=True)
             
-            # 文案列表 - 使用3列网格
-            st.markdown('<div class="panel"><h4>生成结果</h4>', unsafe_allow_html=True)
+            st.markdown("<div style='margin:1.5rem 0;'></div>", unsafe_allow_html=True)
             
-            # 将30条分成每行3个
+            # 文案网格 3列
             items = st.session_state.items
-            for row_idx in range(0, len(items), 3):
+            for row in range(0, len(items), 3):
                 cols = st.columns(3)
-                for col_idx in range(3):
-                    idx = row_idx + col_idx
+                for cidx, col in enumerate(cols):
+                    idx = row + cidx
                     if idx >= len(items):
                         break
                     
                     item = items[idx]
-                    with cols[col_idx]:
+                    with col:
                         is_fail = item['wc'] == 0
                         is_warn = not item['ok'] and not is_fail
-                        card_cls = "error" if is_fail else ("warning" if is_warn else "success")
-                        ctype_color = CONTENT_TYPES.get(item['type'], {}).get('color', '#667eea')
+                        ct = CONTENT_TYPES.get(item['type'], {})
                         
-                        status = ('<span class="status-tag tag-ok">优质</span>' if item['ok'] 
-                                 else '<span class="status-tag tag-err">失败</span>' if is_fail 
-                                 else '<span class="status-tag tag-warn">需优化</span>')
-                        
-                        len_badge = (f'<span class="badge badge-success">长 {item["wc"]}字</span>' if item['len'] == 'long'
-                                    else f'<span class="badge badge-accent">短 {item["wc"]}字</span>')
+                        status = f'<span class="status-badge {"status-ok" if item["ok"] else "status-err" if is_fail else "status-warn"}">{"优质" if item["ok"] else "失败" if is_fail else "需优化"}</span>'
                         
                         card = f'''
-                        <div class="result-card {card_cls}">
+                        <div class="result-card">
                             <div class="card-header">
                                 <div class="card-meta">
-                                    <span class="idx-num">#{item['idx']}</span>
-                                    <span class="badge" style="background:{ctype_color};color:white">{item['type']}</span>
-                                    {len_badge}
+                                    <div class="idx-badge">{item['idx']}</div>
+                                    <span class="content-tag {ct.get('class', 'tag-blue')}">{item['type']}</span>
+                                    <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">{item['wc']}字</span>
                                 </div>
                                 {status}
                             </div>
-                            <div class="content-box">{item['content']}</div>
+                            <div class="content-text">{item['content']}</div>
                         '''
                         st.markdown(card, unsafe_allow_html=True)
                         
                         if item.get('issues'):
                             st.markdown(f'<div class="issue-tag">⚠ {" · ".join(item["issues"])}</div>', unsafe_allow_html=True)
                         
-                        b1, b2, b3 = st.columns([1, 1, 1])
+                        b1, b2, b3 = st.columns(3)
                         with b1:
                             if st.button("复制", key=f"cp{idx}", use_container_width=True):
                                 st.toast(f"已复制 #{item['idx']}")
                         with b2:
                             if (is_fail or item['wc'] < 120) and st.button("重试", key=f"rt{idx}", use_container_width=True):
                                 with st.spinner("重试..."):
-                                    new = generate(st.session_state.raw, 
-                                                  {'idx': item['idx'], 'style': item['style'], 'angle': item['angle']},
-                                                  industry, item['len'])
+                                    new = generate(st.session_state.raw_data, item['idx'], industry, item['len'])
                                     if new:
                                         st.session_state.items[idx] = new
                                         st.rerun()
                         with b3:
-                            if item['ok']:
-                                tgt = 'long' if item['len'] == 'short' else 'short'
-                                lbl = "转长" if tgt == 'long' else "转短"
-                                if st.button(lbl, key=f"sw{idx}", use_container_width=True):
-                                    with st.spinner("切换..."):
-                                        new = generate(st.session_state.raw,
-                                                      {'idx': item['idx'], 'style': item['style'], 'angle': item['angle']},
-                                                      industry, tgt)
-                                        if new:
-                                            st.session_state.items[idx] = new
-                                            st.rerun()
+                            if item['ok'] and st.button("转长" if item['len']=='short' else "转短", key=f"sw{idx}", use_container_width=True):
+                                with st.spinner("切换..."):
+                                    new = generate(st.session_state.raw_data, item['idx'], industry, 'long' if item['len']=='short' else 'short')
+                                    if new:
+                                        st.session_state.items[idx] = new
+                                        st.rerun()
                         
                         st.markdown('</div>', unsafe_allow_html=True)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 批量操作")
+        if st.session_state.items:
+            if st.button("检测全部敏感词"):
+                n = sum(len(check_sensitive_words(i.get('content', ''))) for i in st.session_state.items)
+                st.error(f"发现 {n} 个敏感词") if n else st.success("无敏感词")
+            if st.button("复制全部文案"):
+                txt = "\n\n".join([f"【{i['type']}】\n{i['content']}" for i in st.session_state.items])
+                st.code(txt)
+            if st.button("清空结果"):
+                st.session_state.items = []
+                st.rerun()
+        else:
+            st.info("先生成文案")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 关于")
+        st.markdown("- **版本**: v4.1")
+        st.markdown("- **功能**: AI生成30条短视频文案")
+        st.markdown("- **特点**: 黄金三秒、语义降维、内容分类")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
