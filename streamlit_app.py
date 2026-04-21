@@ -50,8 +50,8 @@ def generate(raw_data, idx, industry, length):
     except Exception as e:
         return {'idx': idx, 'content': f"失败:{str(e)[:20]}", 'wc': 0, 'ok': False, 'type': ctype}
 
-# 初始化
-if 'items' not in st.session_state:
+# 初始化 - 确保 items 是列表
+if 'items' not in st.session_state or st.session_state.items is None:
     st.session_state.items = []
 
 # ===== 顶部标题区 =====
@@ -83,7 +83,7 @@ with left_col:
         st.markdown("🟢 **认知反转** - 颠覆常识")
     
     # 工具按钮
-    if st.session_state.items:
+    if st.session_state.items and len(st.session_state.items) > 0:
         st.divider()
         if st.button("📋 复制全部", use_container_width=True):
             txt = "\n\n".join([f"【{i['type']}】\n{i['content']}" for i in st.session_state.items])
@@ -117,7 +117,7 @@ with right_col:
                     st.rerun()
     
     # 结果显示
-    if st.session_state.items:
+    if st.session_state.items and len(st.session_state.items) > 0:
         st.divider()
         st.markdown("### 📊 生成结果")
         
