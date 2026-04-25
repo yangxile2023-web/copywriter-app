@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-晓牧传媒文案助手 v5.0
-现代简洁风格 - 米白+橙色配色
+晓牧传媒文案助手 v5.1 - Kimi风格
+深色主题 · 极简设计 · 紫色主调
 """
 import streamlit as st
 import re
@@ -9,292 +9,350 @@ import time
 from openai import OpenAI
 from sensitive_words import check_sensitive_words
 
-st.set_page_config(page_title="晓牧传媒文案助手", layout="wide")
+st.set_page_config(
+    page_title="晓牧传媒文案助手",
+    page_icon="✨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# 现代简洁风格CSS
+# Kimi风格CSS - 深色主题
 st.markdown("""
 <style>
-    /* 基础样式 */
-    * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif !important; }
-    
+    /* 基础深色背景 */
     .stApp {
-        background: linear-gradient(135deg, #faf8f5 0%, #f5f0e8 100%) !important;
+        background: #0d0d0d !important;
     }
     
-    #MainMenu, header, footer { display: none !important; }
+    /* 侧边栏 */
+    .css-1d391kg {
+        background: #171717 !important;
+        border-right: 1px solid #262626 !important;
+    }
     
-    /* 主布局 */
+    /* 主内容区 */
     .main .block-container {
-        max-width: 1400px !important;
-        padding: 0 !important;
+        max-width: 1000px !important;
+        padding: 2rem !important;
     }
     
-    /* 左侧品牌区 */
-    .brand-section {
-        background: linear-gradient(180deg, #faf8f5 0%, #f0ebe3 100%);
-        padding: 3rem;
-        min-height: 100vh;
-        position: relative;
+    /* 隐藏默认元素 */
+    #MainMenu, header, footer {
+        display: none !important;
     }
     
-    .brand-label {
-        color: #ff8c42;
-        font-size: 0.875rem;
+    /* 侧边栏标题 */
+    .sidebar-title {
+        color: #fff;
+        font-size: 1.25rem;
         font-weight: 600;
-        letter-spacing: 0.2em;
-        margin-bottom: 0.5rem;
-    }
-    
-    .brand-name {
-        color: #ff8c42;
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    
-    .brand-sub {
-        color: #999;
-        font-size: 0.875rem;
-    }
-    
-    .main-title {
-        margin-top: 4rem;
-    }
-    
-    .main-title h1 {
-        font-size: 3.5rem !important;
-        font-weight: 800 !important;
-        line-height: 1.2 !important;
-        color: #1a1a1a !important;
-        margin: 0 !important;
-    }
-    
-    .main-title .highlight {
-        color: #ff8c42;
-    }
-    
-    .features {
-        margin-top: 2rem;
-        color: #666;
-        font-size: 0.9375rem;
-        line-height: 2;
-    }
-    
-    .stats-row {
+        padding: 1rem;
         display: flex;
-        gap: 3rem;
-        margin-top: 4rem;
+        align-items: center;
+        gap: 0.5rem;
     }
     
-    .stat-item h3 {
-        font-size: 2.5rem;
-        color: #ff8c42;
-        margin: 0;
-    }
-    
-    .stat-item p {
-        color: #999;
-        font-size: 0.875rem;
-        margin: 0.25rem 0 0 0;
-    }
-    
-    /* 功能标签 */
-    .feature-tags {
+    /* 新建对话按钮 */
+    .new-chat-btn {
+        background: #262626;
+        border: 1px solid #404040;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin: 0 1rem 1rem 1rem;
+        color: #e5e5e5;
+        cursor: pointer;
         display: flex;
-        gap: 1rem;
-        margin-top: 3rem;
-        flex-wrap: wrap;
-    }
-    
-    .feature-tag {
-        padding: 0.75rem 1.5rem;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        color: #666;
-        font-size: 0.875rem;
-        background: rgba(255,255,255,0.5);
-    }
-    
-    /* 右侧工作区 */
-    .work-section {
-        background: #ffffff;
-        padding: 3rem;
-        min-height: 100vh;
-    }
-    
-    .welcome-text {
-        color: #ff8c42;
-        font-size: 0.875rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
         font-weight: 500;
-        letter-spacing: 0.3em;
-        margin-bottom: 1rem;
+        transition: all 0.2s;
     }
     
-    .section-title {
+    .new-chat-btn:hover {
+        background: #333;
+        border-color: #525252;
+    }
+    
+    /* 导航项 */
+    .nav-item {
+        padding: 0.75rem 1rem;
+        margin: 0 0.5rem;
+        border-radius: 8px;
+        color: #a3a3a3;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+    }
+    
+    .nav-item:hover {
+        background: #262626;
+        color: #e5e5e5;
+    }
+    
+    .nav-item.active {
+        background: #262626;
+        color: #a78bfa;
+    }
+    
+    /* 主标题 */
+    .main-title {
+        color: #fff;
         font-size: 1.75rem;
-        font-weight: 700;
-        color: #1a1a1a;
+        font-weight: 600;
         margin-bottom: 0.5rem;
     }
     
-    .section-title .version {
-        font-size: 0.875rem;
-        color: #999;
-        font-weight: 400;
-    }
-    
-    .section-desc {
-        color: #666;
+    .main-subtitle {
+        color: #737373;
+        font-size: 0.9375rem;
         margin-bottom: 2rem;
     }
     
-    /* 输入框样式 */
+    /* 输入区域 */
+    .input-container {
+        background: #171717;
+        border: 1px solid #262626;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .input-label {
+        color: #a3a3a3;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+    
     .stTextArea textarea {
-        background: #f8f8f8 !important;
-        border: 1px solid #e0e0e0 !important;
+        background: #0d0d0d !important;
+        border: 1px solid #262626 !important;
         border-radius: 12px !important;
+        color: #e5e5e5 !important;
         padding: 1rem !important;
         font-size: 1rem !important;
-        color: #333 !important;
+        line-height: 1.6 !important;
     }
     
     .stTextArea textarea:focus {
-        border-color: #ff8c42 !important;
-        box-shadow: 0 0 0 3px rgba(255,140,66,0.1) !important;
+        border-color: #a78bfa !important;
+        box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2) !important;
     }
     
-    /* 按钮样式 */
-    .stButton>button[kind="primary"] {
-        background: #ff8c42 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 1rem 2rem !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        color: white !important;
-        box-shadow: 0 4px 15px rgba(255,140,66,0.3) !important;
-        transition: all 0.3s !important;
+    .stTextArea textarea::placeholder {
+        color: #525252 !important;
     }
     
-    .stButton>button[kind="primary"]:hover {
-        background: #e67a35 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255,140,66,0.4) !important;
+    /* 配置行 */
+    .config-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
     }
     
     /* 选择器 */
     .stSelectbox > div > div {
-        background: #f8f8f8 !important;
-        border: 1px solid #e0e0e0 !important;
+        background: #0d0d0d !important;
+        border: 1px solid #262626 !important;
         border-radius: 10px !important;
+        color: #e5e5e5 !important;
     }
     
-    /* 统计卡片 */
-    .stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #f0f0f0;
-        text-align: center;
+    /* 单选按钮 */
+    .stRadio > div {
+        background: #0d0d0d !important;
+        border-radius: 10px !important;
+        padding: 0.5rem !important;
     }
     
-    .stat-card h4 {
-        font-size: 2rem;
-        color: #ff8c42;
-        margin: 0;
+    .stRadio label {
+        color: #a3a3a3 !important;
     }
     
-    .stat-card p {
-        color: #999;
-        font-size: 0.875rem;
-        margin: 0.5rem 0 0 0;
+    /* 发送按钮 */
+    .stButton>button[kind="primary"] {
+        background: #7c3aed !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 0.875rem 2rem !important;
+        font-weight: 600 !important;
+        color: white !important;
+        transition: all 0.2s !important;
     }
     
-    /* 文案卡片 */
-    .copy-card {
-        background: white;
-        border-radius: 12px;
+    .stButton>button[kind="primary"]:hover {
+        background: #6d28d9 !important;
+        transform: translateY(-1px);
+    }
+    
+    /* 消息卡片 */
+    .message-card {
+        background: #171717;
+        border: 1px solid #262626;
+        border-radius: 16px;
         padding: 1.5rem;
         margin-bottom: 1rem;
-        border: 1px solid #f0f0f0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: all 0.2s;
     }
     
-    .copy-header {
+    .message-card:hover {
+        border-color: #404040;
+    }
+    
+    /* AI头像 */
+    .ai-avatar {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #7c3aed, #a78bfa);
+        border-radius: 8px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    /* 用户头像 */
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        background: #262626;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #a3a3a3;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    /* 消息头部 */
+    .message-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
         margin-bottom: 1rem;
     }
     
-    .copy-type {
-        padding: 0.35rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    
-    .type-red { background: #fff0eb; color: #c45c3e; }
-    .type-purple { background: #f3e8ff; color: #7c3aed; }
-    .type-yellow { background: #fff8e7; color: #b8860b; }
-    .type-green { background: #e8f5e9; color: #2e7d32; }
-    
-    .copy-status {
-        font-size: 0.8rem;
+    .message-author {
+        color: #e5e5e5;
         font-weight: 500;
     }
     
-    .status-ok { color: #2e7d32; }
-    .status-warn { color: #b8860b; }
-    .status-err { color: #c45c3e; }
+    .message-meta {
+        color: #737373;
+        font-size: 0.75rem;
+    }
     
-    .copy-content {
-        background: #fafafa;
-        border-radius: 10px;
-        padding: 1rem;
+    /* 消息内容 */
+    .message-content {
+        color: #d4d4d4;
         line-height: 1.8;
-        color: #333;
-        margin-bottom: 1rem;
+        font-size: 0.9375rem;
+        padding-left: 2.75rem;
     }
     
-    .copy-meta {
-        display: flex;
-        gap: 1rem;
+    /* 代码块样式 */
+    .stCode {
+        background: #0d0d0d !important;
+        border: 1px solid #262626 !important;
+        border-radius: 10px !important;
+    }
+    
+    /* 工具按钮 */
+    .tool-btn {
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        color: #a3a3a3;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-right: 0.5rem;
+    }
+    
+    .tool-btn:hover {
+        background: #262626;
+        color: #e5e5e5;
+        border-color: #404040;
+    }
+    
+    /* 类型标签 */
+    .type-badge {
+        display: inline-flex;
         align-items: center;
+        padding: 0.25rem 0.625rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 0.5rem;
     }
     
-    .copy-index {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #ddd;
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge-purple { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+    .badge-yellow { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .badge-green { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    
+    /* 统计栏 */
+    .stats-bar {
+        display: flex;
+        gap: 2rem;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #262626;
+    }
+    
+    .stat-box {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-value {
+        color: #e5e5e5;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    .stat-label {
+        color: #737373;
+        font-size: 0.875rem;
     }
     
     /* 分隔线 */
-    .divider {
+    .dark-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+        background: #262626;
         margin: 2rem 0;
     }
     
-    /* 标签页 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0;
-        background: #f8f8f8;
-        padding: 0.25rem;
-        border-radius: 10px;
+    /* 加载动画 */
+    .loading-text {
+        color: #737373;
+        font-size: 0.9375rem;
     }
     
-    .stTabs [data-baseweb="tab"] {
-        color: #666 !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 1.5rem !important;
+    /* 滚动条 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
     }
     
-    .stTabs [aria-selected="true"] {
-        background: white !important;
-        color: #ff8c42 !important;
-        font-weight: 600 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    ::-webkit-scrollbar-track {
+        background: #0d0d0d;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #444;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -310,10 +368,10 @@ INDUSTRIES = {
 }
 
 CONTENT_TYPES = {
-    "干货避坑": {"class": "type-red", "desc": "揭露行业内幕"},
-    "人设故事": {"class": "type-purple", "desc": "老板个人经历"},
-    "细节特写": {"class": "type-yellow", "desc": "产品工艺细节"},
-    "认知反转": {"class": "type-green", "desc": "颠覆常识"}
+    "干货避坑": {"badge": "badge-red", "icon": "💡"},
+    "人设故事": {"badge": "badge-purple", "icon": "👤"},
+    "细节特写": {"badge": "badge-yellow", "icon": "🔍"},
+    "认知反转": {"badge": "badge-green", "icon": "💫"}
 }
 
 KIMI_KEY = "sk-IA6qyNJFSYC8UB9RHnGHsgz24VWSrKalSnd5nTTbJNiqQ2uu"
@@ -344,165 +402,149 @@ def generate(raw_data, idx, length):
         ok = min_w <= wc <= max_w and not re.search(r'[路街道]\s*\d+[号]', content)
         return {'idx': idx, 'content': content, 'wc': wc, 'ok': ok, 'type': ctype}
     except Exception as e:
-        return {'idx': idx, 'content': f"失败:{str(e)[:30]}", 'wc': 0, 'ok': False, 'type': ctype}
+        return {'idx': idx, 'content': f"生成失败: {str(e)[:30]}", 'wc': 0, 'ok': False, 'type': ctype}
 
 # 初始化
 if 'items' not in st.session_state:
     st.session_state.items = []
+if 'current_view' not in st.session_state:
+    st.session_state.current_view = "generate"
 
-# 两栏布局
-left_col, right_col = st.columns([1, 1])
+# ========== 侧边栏 ==========
+with st.sidebar:
+    # 标题
+    st.markdown('<div class="sidebar-title">✨ 文案助手</div>', unsafe_allow_html=True)
+    
+    # 新建对话按钮
+    if st.button("➕ 新建对话", use_container_width=True):
+        st.session_state.items = []
+        st.rerun()
+    
+    st.markdown("<div style='margin:1rem 0; border-top:1px solid #262626;'></div>", unsafe_allow_html=True)
+    
+    # 导航菜单
+    nav_items = [
+        ("generate", "✨", "生成文案"),
+        ("batch", "📚", "批量管理"),
+        ("settings", "⚙️", "设置")
+    ]
+    
+    for key, icon, label in nav_items:
+        active = "active" if st.session_state.current_view == key else ""
+        if st.button(f"{icon} {label}", use_container_width=True, key=f"nav_{key}"):
+            st.session_state.current_view = key
+            st.rerun()
 
-# ========== 左侧品牌区 ==========
-with left_col:
-    st.markdown("""
-    <div class="brand-section">
-        <div class="brand-label">// XIAOMUCHUANMEI</div>
-        <div class="brand-name">晓牧传媒</div>
-        <div class="brand-sub">内容创作系统 · 内部专用</div>
-        
-        <div class="main-title">
-            <h1>专注短视频<br><span class="highlight">文案内容</span>创作</h1>
-        </div>
-        
-        <div class="features">
-            AI 驱动生成 · 行业违禁词精准扫描<br>
-            10批次 × 3条 · 30个脚本一键导出 Word
-        </div>
-        
-        <div class="stats-row">
-            <div class="stat-item">
-                <h3>30+</h3>
-                <p>脚本/次生成</p>
-            </div>
-            <div class="stat-item">
-                <h3>10+</h3>
-                <p>行业分类适配</p>
-            </div>
-            <div class="stat-item">
-                <h3>AI</h3>
-                <p>智能质量评分</p>
-            </div>
-        </div>
-        
-        <div class="feature-tags">
-            <div class="feature-tag">AI 文案生成</div>
-            <div class="feature-tag">违禁词扫描</div>
-            <div class="feature-tag">Word 导出</div>
-            <div class="feature-tag">订单管理</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ========== 右侧工作区 ==========
-with right_col:
-    st.markdown("""
-    <div class="work-section">
-        <div class="welcome-text">// 欢迎回来</div>
-        <div class="section-title">文案工作台 <span class="version">v5.0</span></div>
-        <div class="section-desc">输入客户资料，生成高质量短视频文案</div>
-    """, unsafe_allow_html=True)
+# ========== 主内容区 ==========
+# 根据当前视图显示不同内容
+if st.session_state.current_view == "generate":
+    # 标题
+    st.markdown('<div class="main-title">生成文案</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-subtitle">输入客户资料，AI生成30条高质量短视频文案</div>', unsafe_allow_html=True)
     
-    # 配置选项卡
-    tab1, tab2, tab3 = st.tabs(["生成文案", "批量管理", "设置"])
+    # 输入区域
+    st.markdown('<div class="input-container">', unsafe_allow_html=True)
     
-    with tab1:
-        # 配置
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**行业类型**")
-            industry = st.selectbox("行业", list(INDUSTRIES.keys()), format_func=lambda x: INDUSTRIES[x], index=5, label_visibility="collapsed")
-        with col2:
-            st.markdown("**文案长度**")
-            length = st.radio("长度", ["short", "long"], format_func=lambda x: "短文案(150-180字)" if x == "short" else "长文案(200-300字)", horizontal=True, label_visibility="collapsed")
-        
-        st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-        
-        # 输入区
-        st.markdown("**客户资料**")
-        raw = st.text_area("资料", height=120, placeholder="请粘贴客户资料：\n\n- 出镜称呼：王老板、李姐\n- 店铺/企业名称\n- 所在城市\n- 主营业务\n- 核心卖点/特色\n- 真实故事或经历", label_visibility="collapsed")
-        
-        # 生成按钮
-        col_stat, col_btn = st.columns([4, 1])
-        with col_stat:
-            st.caption(f"已输入 {len(raw)} 字")
-        with col_btn:
-            if st.button("生成 →", type="primary", use_container_width=True):
-                if len(raw) < 30:
-                    st.error("资料至少30字")
-                else:
-                    with st.spinner("AI生成中..."):
-                        prog = st.progress(0)
-                        st.session_state.items = []
-                        for i in range(30):
-                            r = generate(raw, i+1, length)
-                            st.session_state.items.append(r)
-                            prog.progress((i+1)/30)
-                    st.rerun()
-        
-        # 结果
-        if st.session_state.items:
-            st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-            st.markdown("**生成结果**")
-            
-            # 统计
-            items = st.session_state.items
-            total = len(items)
-            ok = sum(1 for i in items if i['ok'])
-            fail = sum(1 for i in items if i['wc'] == 0)
-            warn = total - ok - fail
-            
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("总数", total)
-            c2.metric("优质", ok)
-            c3.metric("需优化", warn)
-            c4.metric("失败", fail)
-            
-            # 文案列表
-            for item in items:
-                is_fail = item['wc'] == 0
-                is_warn = not item['ok'] and not is_fail
-                ct_info = CONTENT_TYPES.get(item['type'], {})
-                status_class = "status-ok" if item['ok'] else "status-err" if is_fail else "status-warn"
-                status_text = "优质" if item['ok'] else "失败" if is_fail else "需优化"
-                
-                st.markdown(f"""
-                <div class="copy-card">
-                    <div class="copy-header">
-                        <div style="display:flex; align-items:center; gap:0.75rem;">
-                            <span class="copy-index">#{item['idx']}</span>
-                            <span class="copy-type {ct_info.get('class', '')}">{item['type']}</span>
-                            <span style="color:#999; font-size:0.875rem;">{item['wc']}字</span>
-                        </div>
-                        <span class="copy-status {status_class}">{status_text}</span>
-                    </div>
-                    <div class="copy-content">{item['content']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                b1, b2 = st.columns([1, 4])
-                with b1:
-                    st.button("复制", key=f"cp{item['idx']}")
+    # 配置行
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown('<div class="input-label">行业类型</div>', unsafe_allow_html=True)
+        industry = st.selectbox("行业", list(INDUSTRIES.keys()), format_func=lambda x: INDUSTRIES[x], index=5, label_visibility="collapsed")
+    with col2:
+        st.markdown('<div class="input-label">文案长度</div>', unsafe_allow_html=True)
+        length = st.radio("长度", ["short", "long"], format_func=lambda x: "短文案 (150-180字)" if x == "short" else "长文案 (200-300字)", horizontal=True, label_visibility="collapsed")
     
-    with tab2:
-        st.markdown("**批量操作**")
-        if st.session_state.items:
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("复制全部文案", use_container_width=True):
-                    txt = "\n\n".join([f"【{i['type']}】\n{i['content']}" for i in st.session_state.items])
-                    st.code(txt)
-            with col2:
-                if st.button("清空结果", use_container_width=True):
+    # 输入框
+    st.markdown('<div class="input-label">客户资料</div>', unsafe_allow_html=True)
+    raw = st.text_area("资料", height=100, placeholder="请粘贴客户资料：出镜称呼、店铺名称、主营业务、真实故事...", label_visibility="collapsed")
+    
+    # 发送按钮
+    col_input, col_btn = st.columns([5, 1])
+    with col_input:
+        st.caption(f"已输入 {len(raw)} 字")
+    with col_btn:
+        if st.button("发送 →", type="primary", use_container_width=True):
+            if len(raw) < 30:
+                st.error("资料至少30字")
+            else:
+                with st.spinner("AI思考中..."):
+                    prog = st.progress(0)
                     st.session_state.items = []
-                    st.rerun()
-        else:
-            st.info("暂无文案，请先生成")
+                    for i in range(30):
+                        r = generate(raw, i+1, length)
+                        st.session_state.items.append(r)
+                        prog.progress((i+1)/30)
+                st.rerun()
     
-    with tab3:
-        st.markdown("**关于**")
-        st.markdown("- 版本: v5.0")
-        st.markdown("- 功能: AI生成30条短视频文案")
-        st.markdown("- 特点: 黄金三秒、语义降维、内容分类")
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown("</div>", unsafe_allow_html=True)
+    # 结果显示
+    if st.session_state.items:
+        # 统计栏
+        items = st.session_state.items
+        total = len(items)
+        ok = sum(1 for i in items if i['ok'])
+        fail = sum(1 for i in items if i['wc'] == 0)
+        warn = total - ok - fail
+        
+        st.markdown(f"""
+        <div class="stats-bar">
+            <div class="stat-box">
+                <span class="stat-value">{total}</span>
+                <span class="stat-label">总数</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" style="color:#4ade80">{ok}</span>
+                <span class="stat-label">优质</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" style="color:#fbbf24">{warn}</span>
+                <span class="stat-label">需优化</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" style="color:#f87171">{fail}</span>
+                <span class="stat-label">失败</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 消息列表
+        for item in items:
+            ct_info = CONTENT_TYPES.get(item['type'], {})
+            status_icon = "✓" if item['ok'] else "✗" if item['wc'] == 0 else "!"
+            
+            st.markdown(f"""
+            <div class="message-card">
+                <div class="message-header">
+                    <div class="ai-avatar">AI</div>
+                    <span class="message-author">文案 #{item['idx']}</span>
+                    <span class="type-badge {ct_info.get('badge', '')}">{item['type']}</span>
+                    <span class="message-meta">{item['wc']} 字 · {status_icon}</span>
+                </div>
+                <div class="message-content">{item['content']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 操作按钮
+            col_copy, col_retry = st.columns([1, 6])
+            with col_copy:
+                st.button("复制", key=f"cp{item['idx']}")
+
+elif st.session_state.current_view == "batch":
+    st.markdown('<div class="main-title">批量管理</div>', unsafe_allow_html=True)
+    
+    if st.session_state.items:
+        if st.button("📋 复制全部文案", use_container_width=True):
+            txt = "\n\n".join([f"【{i['type']}】\n{i['content']}" for i in st.session_state.items])
+            st.code(txt, language=None)
+        if st.button("🗑️ 清空结果", use_container_width=True):
+            st.session_state.items = []
+            st.rerun()
+    else:
+        st.info("暂无文案，请先在生成页面创建")
+
+elif st.session_state.current_view == "settings":
+    st.markdown('<div class="main-title">设置</div>', unsafe_allow_html=True)
+    st.markdown("- 版本: v5.1 (Kimi风格)")
+    st.markdown("- 主题: 深色模式")
+    st.markdown("- API: Kimi (Moonshot)")
