@@ -20,7 +20,10 @@ KIMI_KEY = "sk-IA6qyNJFSYC8UB9RHnGHsgz24VWSrKalSnd5nTTbJNiqQ2uu"
 def get_client():
     return OpenAI(api_key=KIMI_KEY, base_url="https://api.moonshot.cn/v1")
 
-if 'items' not in st.session_state:
+# 确保 items 始终存在且是列表
+if 'items' not in st.session_state or st.session_state.items is None:
+    st.session_state.items = []
+if not isinstance(st.session_state.items, list):
     st.session_state.items = []
 
 # 侧边栏
@@ -66,7 +69,7 @@ if st.button("生成30条文案", type="primary", use_container_width=True):
         st.rerun()
 
 # 显示结果
-if st.session_state.items:
+if st.session_state.items and isinstance(st.session_state.items, list) and len(st.session_state.items) > 0:
     st.divider()
     st.subheader(f"生成结果 ({len(st.session_state.items)}条)")
     for item in st.session_state.items:
