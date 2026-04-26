@@ -6,6 +6,10 @@ Apple Design Style - 简洁、优雅、留白
 import streamlit as st
 import re
 from openai import OpenAI
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import io
 
 st.set_page_config(
     page_title="晓牧传媒文案助手",
@@ -621,5 +625,61 @@ if isinstance(st.session_state.items, list) and len(st.session_state.items) > 0:
         """, unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Word 下载按钮
+    st.markdown('<div style="margin-top: 24px;"></div>', unsafe_allow_html=True)
+    
+    # 生成 Word 文档
+    doc = Document()
+    
+    # 标题
+    title = doc.add_heading('晓牧传媒文案生成结果', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # 统计信息
+    doc.add_paragraph(f'生成总数: {len(st.session_state.items)} 条')
+    doc.add_paragraph(f'优质文案: {sum(1 for i in st.session_state.items if i["ok"])} 条')
+    doc.add_paragraph()
+    
+    # 添加每条文案
+    for item in st.session_state.items:
+        # 类型标题
+        p = doc.add_paragraph()
+        run = p.add_run(f'【{item["type"]}】文案 #{item["idx"]}')
+        run.bold = True
+        run.font.size = Pt(12)
+        run.font.color.rgb = RGBColor(0, 122, 255)
+        
+        # 文案内容
+        content_p = doc.add_paragraph(item['content'])
+        content_p.paragraph_format.line_spacing = 1.5
+        
+        # 状态
+        status = "优质" if item['ok'] else "失败" if item['wc'] == 0 else "需优化"
+        status_p = doc.add_paragraph(f'状态: {status} | 字数: {item["wc"]} 字')
+        status_p.runs[0].font.size = Pt(9)
+        status_p.runs[0].font.color.rgb = RGBColor(142, 142, 147)
+        
+        # 分隔线
+        doc.add_paragraph('_' * 50)
+    
+    # 保存到内存
+    doc_io = io.BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+    
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.download_button(
+            label='📄 下载 Word 文档',
+            data=doc_io,
+            file_name='晓牧传媒文案生成结果.docx',
+            mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            use_container_width=True
+        )
+    with col2:
+        if st.button('🗑️ 清空结果', use_container_width=True):
+            st.session_state.items = []
+            st.rerun()
 
 st.markdown('</div>', unsafe_allow_html=True)
