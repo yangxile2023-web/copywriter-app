@@ -585,11 +585,12 @@ if st.button("生成文案", type="primary", use_container_width=True):
     else:
         with st.spinner("AI生成中..."):
             prog = st.progress(0)
-            st.session_state.items = []
+            items = []
             for i in range(30):
                 r = generate(raw, i+1, "short" if "短" in length else "long")
-                st.session_state.items.append(r)
+                items.append(r)
                 prog.progress((i+1)/30)
+            st.session_state.items = items
         st.rerun()
 
 st.markdown('</div>', unsafe_allow_html=True)
