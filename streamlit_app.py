@@ -485,8 +485,12 @@ def generate(raw_data, idx, length):
     except Exception as e:
         return {'idx': idx, 'content': f"失败:{str(e)[:30]}", 'wc': 0, 'ok': False, 'type': ctype}
 
-# 安全初始化
-if 'items' not in st.session_state or not isinstance(st.session_state.items, list):
+# 安全初始化 - 防止 None
+if 'items' not in st.session_state:
+    st.session_state.items = []
+elif st.session_state.items is None:
+    st.session_state.items = []
+elif not isinstance(st.session_state.items, list):
     st.session_state.items = []
 
 # ========== 侧边栏 ==========
@@ -521,7 +525,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 统计卡片（有数据时显示）
-if st.session_state.items and len(st.session_state.items) > 0:
+if isinstance(st.session_state.items, list) and len(st.session_state.items) > 0:
     items = st.session_state.items
     total = len(items)
     ok = sum(1 for i in items if i['ok'])
@@ -591,7 +595,7 @@ if st.button("生成文案", type="primary", use_container_width=True):
 st.markdown('</div>', unsafe_allow_html=True)
 
 # 结果列表
-if st.session_state.items and len(st.session_state.items) > 0:
+if isinstance(st.session_state.items, list) and len(st.session_state.items) > 0:
     st.markdown('<div class="apple-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-header"><div class="card-title">生成结果</div></div>', unsafe_allow_html=True)
     
