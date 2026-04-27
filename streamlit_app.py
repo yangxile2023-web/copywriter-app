@@ -163,11 +163,11 @@ if generate_clicked:
             st.success(f"成功生成 {len(new_items)} 条文案！")
 
 # 显示结果
-if st.session_state.items:
+if isinstance(st.session_state.get('items'), list) and len(st.session_state.items) > 0:
     st.markdown("---")
     st.markdown("### 生成结果")
     
-    items = st.session_state.items
+    items = st.session_state.items or []
     total = len(items)
     ok_count = sum(1 for i in items if i.get('ok'))
     fail_count = sum(1 for i in items if i.get('wc', 0) == 0)
